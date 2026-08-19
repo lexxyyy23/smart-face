@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMART FACE | Facial Recognition & Attendance System</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#0b1020;color:#eef2ff}
+    .app{display:flex;min-height:100vh}.sidebar{width:245px;background:#10172d;border-right:1px solid #25304d;padding:24px 16px;position:fixed;height:100vh}
+    .brand{font-size:20px;font-weight:800;padding:10px 12px;margin-bottom:28px}.brand span{color:#6ea8fe}
+    nav button{width:100%;border:0;background:transparent;color:#aab4cf;text-align:left;padding:13px 14px;border-radius:10px;margin:4px 0;cursor:pointer;font-size:14px}
+    nav button.active,nav button:hover{background:#1c2847;color:white}.main{margin-left:245px;width:calc(100% - 245px);padding:30px}
+    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}.top h1{margin:0;font-size:28px}.status{font-size:12px;color:#8fa0c5}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.card{background:#111a31;border:1px solid #25304d;border-radius:16px;padding:20px}
+    .metric{font-size:30px;font-weight:800;margin-top:8px}.muted{color:#8996b4;font-size:13px}.section{display:none}.section.active{display:block}
+    .content-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-top:20px}.video-card{position:relative;background:#070b16;border-radius:16px;overflow:hidden;border:1px solid #25304d;min-height:390px}
+    video{width:100%;height:390px;object-fit:cover;display:block;transform:scaleX(-1)}canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+    .camera-overlay{position:absolute;left:18px;right:18px;bottom:18px;padding:14px;border-radius:12px;background:rgba(8,12,25,.84);backdrop-filter:blur(8px)}
+    .result-name{font-size:20px;font-weight:800}.confidence{color:#76e39a;font-size:13px;margin-top:4px}.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    button.primary,.btn{border:0;border-radius:9px;padding:11px 15px;background:#3978ff;color:#fff;font-weight:700;cursor:pointer}.btn.secondary{background:#25304d}
+    .form{display:grid;gap:12px}.form input{background:#0b1224;border:1px solid #2b3757;color:#fff;padding:12px;border-radius:9px;outline:none}
+    .table-wrap{overflow:auto;margin-top:18px}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:13px;text-align:left;border-bottom:1px solid #24304d;font-size:13px}.pill{padding:5px 8px;border-radius:20px;background:#163c2b;color:#7bf0a2}
+    .notice{padding:12px 14px;border-radius:10px;background:#171f38;color:#aeb9d3;font-size:13px;margin-top:12px}.hero{padding:24px;border-radius:16px;background:linear-gradient(135deg,#17264c,#111a31);border:1px solid #2b3a60}
+    @media(max-width:900px){.sidebar{width:75px}.brand{font-size:0}.brand span{font-size:20px}.main{margin-left:75px;width:calc(100% - 75px)}nav button{font-size:0;text-align:center}.grid{grid-template-columns:repeat(2,1fr)}.content-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">SMART <span>FACE</span></div>
+    <nav>
+      <button class="active" onclick="showSection('dashboard',this)">▦ &nbsp; Dashboard</button>
+      <button onclick="showSection('recognize',this)">◉ &nbsp; Recognition</button>
+      <button onclick="showSection('register',this)">＋ &nbsp; Register Face</button>
+      <button onclick="showSection('attendance',this)">✓ &nbsp; Attendance</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="top"><div><h1 id="pageTitle">Dashboard</h1><div class="status">Facial Recognition & Attendance Management System</div></div><div class="status">SYSTEM ONLINE</div></div>
+
+    <section id="dashboard" class="section active">
+      <div class="hero"><h2>Welcome to SMART FACE</h2><p class="muted">A browser-based facial recognition prototype for automated identity verification and attendance tracking.</p>
+        <div class="btns"><button class="primary" onclick="showSection('recognize',document.querySelectorAll('nav button')[1])">Start Recognition</button><button class="btn secondary" onclick="showSection('register',document.querySelectorAll('nav button')[2])">Register Person</button></div>
+      </div>
+      <div class="grid" style="margin-top:20px">
+        <div class="card"><div class="muted">Registered Users</div><div class="metric" id="userCount">0</div></div>
+        <div class="card"><div class="muted">Today's Attendance</div><div class="metric" id="attendanceCount">0</div></div>
+        <div class="card"><div class="muted">Recognition Status</div><div class="metric" style="font-size:18px">READY</div></div>
+        <div class="card"><div class="muted">Storage</div><div class="metric" style="font-size:18px">LOCAL</div></div>
+      </div>
+    </section>
+
+    <section id="recognize" class="section">
+      <div class="content-grid">
+        <div class="video-card"><video id="video" autoplay muted playsinline></video><canvas id="overlay"></canvas>
+          <div class="camera-overlay"><div class="result-name" id="resultName">Camera not started</div><div class="confidence" id="resultConfidence">Click Start Camera to begin.</div></div>
+        </div>
+        <div class="card"><h3>Recognition Console</h3><p class="muted">The system detects a face, creates a facial descriptor and compares it with registered descriptors.</p>
+          <div class="btns"><button class="primary" id="startBtn">Start Camera</button><button class="btn secondary" id="stopBtn">Stop</button></div>
+          <div class="notice" id="modelStatus">Loading AI models…</div>
+          <div class="notice">Tip: register at least one face before testing recognition.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="register" class="section">
+      <div class="content-grid">
+        <div class="video-card"><video id="regVideo" autoplay muted playsinline></video><canvas id="regOverlay"></canvas></div>
+        <div class="card"><h3>Register New Person</h3><p class="muted">Enter an ID and name, then capture one clear frontal face.</p>
+          <div class="form"><input id="personId" placeholder="Student ID e.g. CEN/2026/001"><input id="personName" placeholder="Full name"></div>
+          <div class="btns"><button class="primary" id="regStart">Start Camera</button><button class="btn secondary" id="captureBtn">Capture & Register</button></div>
+          <div class="notice" id="regMsg">No registration captured yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="attendance" class="section">
+      <div class="card"><h3>Attendance Records</h3><p class="muted">Recognition events recorded in this browser.</p>
+        <div class="table-wrap"><table class="table"><thead><tr><th>Time</th><th>ID</th><th>Name</th><th>Confidence</th><th>Status</th></tr></thead><tbody id="attendanceBody"></tbody></table></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const MODEL_URL='https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+let users=JSON.parse(localStorage.getItem('smartface_users')||'[]');
+let attendance=JSON.parse(localStorage.getItem('smartface_attendance')||'[]');
+let stream=null, regStream=null, matcher=null, running=false, lastLogged={};
+
+function save(){localStorage.setItem('smartface_users',JSON.stringify(users));localStorage.setItem('smartface_attendance',JSON.stringify(attendance));updateUI();}
+function updateUI(){document.getElementById('userCount').textContent=users.length; const today=new Date().toDateString(); document.getElementById('attendanceCount').textContent=attendance.filter(x=>new Date(x.time).toDateString()===today).length; renderAttendance();}
+function showSection(id,btn){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');document.getElementById('pageTitle').textContent={dashboard:'Dashboard',recognize:'Live Recognition',register:'Register Face',attendance:'Attendance Records'}[id];}
+async function loadModels(){
+  try{
+    await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)]);
+    document.getElementById('modelStatus').textContent='AI models loaded successfully.';
+  }catch(e){document.getElementById('modelStatus').textContent='Model loading failed. Check internet connection.';console.error(e);}
+}
+function buildMatcher(){if(!users.length){matcher=null;return;} matcher=new faceapi.FaceMatcher(users.map(u=>new faceapi.LabeledFaceDescriptors(u.id,[new Float32Array(u.descriptor)])),0.55);}
+async function getDescriptor(videoEl){const d=await faceapi.detectSingleFace(videoEl,new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();return d;}
+async function startVideo(videoEl){const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:480}},audio:false});videoEl.srcObject=s;return s;}
+document.getElementById('startBtn').onclick=async()=>{try{stream=await startVideo(document.getElementById('video'));running=true;document.getElementById('resultName').textContent='Scanning…';recognizeLoop();}catch(e){alert('Camera access was blocked. Allow camera permission and try again.');}};
+document.getElementById('stopBtn').onclick=()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());document.getElementById('resultName').textContent='Camera stopped';};
+async function recognizeLoop(){if(!running)return;const v=document.getElementById('video');if(v.readyState>=2){const d=await getDescriptor(v);const canvas=document.getElementById('overlay');if(d){const dims={width:v.clientWidth,height:v.clientHeight};canvas.width=v.videoWidth;canvas.height=v.videoHeight;const resized=faceapi.resizeResults(d,{width:v.videoWidth,height:v.videoHeight});canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);faceapi.draw.drawDetections(canvas,[resized.detection]);if(matcher){const m=matcher.findBestMatch(d.descriptor);if(m.label==='unknown'){document.getElementById('resultName').textContent='Unknown Person';document.getElementById('resultConfidence').textContent='No registered match';}else{const u=users.find(x=>x.id===m.label);document.getElementById('resultName').textContent=u?u.name:m.label;document.getElementById('resultConfidence').textContent='Match distance: '+m.distance.toFixed(3);if(u && (!lastLogged[u.id]||Date.now()-lastLogged[u.id]>10000)){attendance.unshift({time:new Date().toISOString(),id:u.id,name:u.name,confidence:(1-m.distance).toFixed(3)});lastLogged[u.id]=Date.now();save();}}}}}setTimeout(recognizeLoop,350);}
+document.getElementById('regStart').onclick=async()=>{try{regStream=await startVideo(document.getElementById('regVideo'));document.getElementById('regMsg').textContent='Camera active. Look directly at the camera.';}catch(e){alert('Camera access was blocked.');}};
+document.getElementById('captureBtn').onclick=async()=>{const id=document.getElementById('personId').value.trim(),name=document.getElementById('personName').value.trim(),v=document.getElementById('regVideo');if(!id||!name){alert('Enter the ID and full name first.');return;}if(!v.srcObject){alert('Start the registration camera first.');return;}const d=await getDescriptor(v);if(!d){document.getElementById('regMsg').textContent='No clear face detected. Improve lighting and face the camera.';return;}users=users.filter(x=>x.id!==id);users.push({id,name,descriptor:Array.from(d.descriptor),registeredAt:new Date().toISOString()});buildMatcher();save();document.getElementById('regMsg').textContent='Registration successful for '+name+'.';};
+function renderAttendance(){const b=document.getElementById('attendanceBody');b.innerHTML=attendance.length?attendance.slice(0,30).map(x=>`<tr><td>${new Date(x.time).toLocaleString()}</td><td>${x.id}</td><td>${x.name}</td><td>${x.confidence}</td><td><span class="pill">Recognized</span></td></tr>`).join(''):'<tr><td colspan="5" class="muted">No attendance records yet.</td></tr>';}
+window.addEventListener('load',async()=>{updateUI();await loadModels();buildMatcher();});
+</script>
+</body>
+</html>
